@@ -4,12 +4,14 @@ from uuid import uuid4
 import os, json, re
 
 from models import Character, Stats
-from engine import apply_effect, resolve_next
+from engine import apply_effect, resolve_next, check_condition
 
 # Save file validation
 
 BASE_DIR = os.path.abspath("saves")
 
+# Ensures save names are filesystem-safe and URL-safe
+# Prevents injection, traversal, and overly large filenames
 def sanitize_save_name(save_name: str) -> str:
     save_name = save_name.strip().lower()
 
@@ -22,12 +24,20 @@ def sanitize_save_name(save_name: str) -> str:
 
     return save_name
 
+# Prevent directory traversal attacks by ensuring save files
+# always resolve inside BASE_DIR
 def save_path(save_name: str):
     path = os.path.abspath(os.path.join(BASE_DIR, f"{save_name}.json"))
 
     if not os.path.commonpath([path, BASE_DIR]) == BASE_DIR:
         raise ValueError("Invalid path")
     return path
+
+def get_session(session_id:str, sessions):
+    state = sessions.get(session_id)
+    if state is None:
+        raise ValueError("Invalid session")
+    return state
 
 # API endpoints
 
@@ -43,16 +53,24 @@ def start_game(request: Request):
         name="Player",
         rpgClass="Adventurer",
         stats=Stats(strength=3, dexterity=3, intelligence=3, faith=3),
-        current_node="start"
+        current_node="scholar:failed_scholar_start"
     )
 
     request.app.state.sessions[session_id] = state
 
     node = story[state.current_node]
 
+    filtered_choices = [
+        c for c in story[state.current_node].choices
+        if check_condition(c.condition, state)
+    ]
+
     return {
         "session_id": session_id,
-        "node": node.model_dump(),
+        "node": {
+            **node.model_dump(),
+            "choices": [c.model_dump() for c in filtered_choices]
+        },
         "state": state.model_dump()
     }
 
@@ -81,9 +99,7 @@ def load_game(save_name: str, session_id: str, request: Request):
 def save_game(save_name: str, session_id: str, request: Request):
     save_name = sanitize_save_name(save_name)
 
-    state = request.app.state.sessions[session_id]
-    if not state:
-        raise ValueError("Invalid session")
+    state = get_session(session_id, request.app.state.sessions)
     
     os.makedirs("saves", exist_ok=True)
     path = save_path(save_name)
@@ -107,24 +123,36 @@ def delete_save(save_name: str):
 def choose(session_id: str, choice_index: int, request: Request):
 
     story = request.app.state.story
-    state = request.app.state.sessions[session_id]
-    if not state:
-        raise ValueError("Invalid session")
+    state = get_session(session_id, request.app.state.sessions)
 
     node = story[state.current_node]
     if choice_index < 0 or choice_index >= len(node.choices):
         raise ValueError("Invalid choice index")
     choice = node.choices[choice_index]
 
-    apply_effect(node.effects, state)
-
     next_node = resolve_next(choice, state)
     state.current_node = next_node
 
-    is_end = len(story[next_node].choices) == 0
+    apply_effect(story[next_node].effects, state)
+
+    # Filter out ineligible choices
+    filtered_choices = [
+        c for c in story[next_node].choices
+        if check_condition(c.condition, state)
+    ]
+
+    # debug only: notify when a choice is filtered out
+    for c in story[next_node].choices:
+        if not check_condition(c.condition, state):
+            print(f"Filtered out: {c.text}")
+
+    is_end = len(filtered_choices) == 0
 
     return {
-        "node": story[next_node].model_dump(),
+        "node": {
+            **story[next_node].model_dump(),
+            "choices": [c.model_dump() for c in filtered_choices]
+        },
         "state": state.model_dump(),
         "is_end": is_end
     }
@@ -132,9 +160,7 @@ def choose(session_id: str, choice_index: int, request: Request):
 @router.post("/autosave")
 def autosave(session_id :str, request: Request):
     
-    state = request.app.state.sessions[session_id]
-    if not state:
-        raise ValueError("Invalid session")
+    state = get_session(session_id, request.app.state.sessions)
     
     path = os.path.join(BASE_DIR, "autosave.json")
     with open(path, "w") as f:

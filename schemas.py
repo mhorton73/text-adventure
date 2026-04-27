@@ -27,6 +27,7 @@ class Effect(BaseModel):
 # Read only
 class Condition(BaseModel):
     required: List[StoryItem] = Field(default_factory=list)
+    required_gold: int = 0
     excluded: List[StoryItem] = Field(default_factory=list)
 
 class SkillCheck(BaseModel):

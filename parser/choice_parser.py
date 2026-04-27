@@ -8,6 +8,7 @@
 #
 # - A choice with conditions
 # requires: flag:a, item:b, item:c...
+# requires gold: 17
 # excludes: flag:d, item:e, flag:f...
 # -> another_node_id
 #
@@ -83,8 +84,11 @@ def parse_next_node_id(choice: dict, line: str):
 def parse_choice_block(block: list[str]) -> dict:
     choice = {
         "text": None,
-        "requires": [],
-        "excludes": [],
+        "condition": {
+            "required": [],
+            "required_gold": 0,
+            "excluded": [],
+        },
         "skill_check": None,
         "next_node": None,
         "success_node": None,
@@ -102,15 +106,20 @@ def parse_choice_block(block: list[str]) -> dict:
             continue
 
         if line.startswith("requires:"):
-            raw = line.replace("requires:", "").strip()
-            choice["requires"] = parse_items(raw)
+            raw = line.removeprefix("requires:").strip()
+            choice["condition"]["required"] = parse_items(raw)
+            
+        elif line.startswith("requires gold:"):
+            choice["condition"]["required_gold"] = int(
+                line.removeprefix("requires gold:").strip()
+            )
 
         elif line.startswith("excludes:"):
-            raw = line.replace("excludes:", "").strip()
-            choice["excludes"] = parse_items(raw)
+            raw = line.removeprefix("excludes:").strip()
+            choice["condition"]["excluded"] = parse_items(raw)
 
         elif line.startswith("skill:"):
-            raw = line.replace("skill:", "").strip()
+            raw = line.removeprefix("skill:").strip()
             choice["skill_check"] = parse_skill_check(raw)
 
     if not destination_line:

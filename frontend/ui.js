@@ -1,12 +1,10 @@
 export function render(node, state, onChoice) {
   
   document.getElementById("stats").innerText = `
-  HP: ${state.hp}
-  Gold: ${state.gold}
-  STR: ${state.stats.strength}
-  DEX: ${state.stats.dexterity}
-  INT: ${state.stats.intelligence}
-  FAI: ${state.stats.faith}
+  HP: ${state.hp},  Gold: ${state.gold}
+  STR: ${state.stats.strength},  DEX: ${state.stats.dexterity}
+  INT: ${state.stats.intelligence}  FAI: ${state.stats.faith}
+  Inventory: ${state.inventory.join(", ")}
   `;
 
   document.getElementById("story").innerHTML =

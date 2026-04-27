@@ -98,7 +98,9 @@ def parse_markdown_node(content: str) -> dict:
         # some basic validation
         if mode == "effects" and not stripped.startswith(("add:", "remove:", "gold:", "stat:")):
             raise ValueError(f"Invalid effects line: {line}")
-        if mode == "choices" and not stripped.startswith(("- ", "requires:", "excludes:", "skill:", "->")):
+        if mode == "choices" and not stripped.startswith(
+            ("- ", "requires:", "excludes:", "skill:", "->", "requires gold:")
+        ):
             raise ValueError(f"Invalid choices line: {line}")
 
         if mode == "text":

@@ -24,6 +24,9 @@ def check_condition(condition: Condition, state: Character):
     for item in condition.required:
         if not check_item(item):
             return False
+        
+    if (condition.required_gold > state.gold):
+        return False
 
     # excluded
     for item in condition.excluded:
@@ -51,7 +54,7 @@ def apply_effect(effect: Effect, state: Character):
         if item.key in collection:
             collection.remove(item.key)
             
-    state.gold += effect.gold_change
+    state.gold = max(0, state.gold + effect.gold_change)
 
     for s in effect.stat_change:
         current_value = getattr(state.stats, s.stat.value)
