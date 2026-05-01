@@ -140,6 +140,10 @@ loader.py   → story loading + validation
 
 ### Running the Project
 
+First, open api.py and change the initialization of current_node in the start_game endpoint to the following:
+```
+current_node="legacy:start"
+```
 Run the backend:
 ```
 pip install -r requirements.txt

@@ -1,6 +1,5 @@
 
 from pydantic import BaseModel, Field
-from typing import List
 
 STARTER_HP = 10
 
@@ -21,9 +20,14 @@ class Character(BaseModel):
     max_hp: int = STARTER_HP
     gold: int = 0
 
-    inventory: List[str] = Field(default_factory=list)
-    flags: List[str] = Field(default_factory=list)
-    spells: List[str] = Field(default_factory=list)
+    inventory: list[str] = Field(default_factory=list)
+    flags: list[str] = Field(default_factory=list)
+    spells: list[str] = Field(default_factory=list)
+
+    trackers: dict[str, int] = Field(
+        default_factory=dict,
+        description="Flexible numeric trackers for story-specific mechanics (e.g. time, exhaustion, reputation)"
+    )  
 
     current_node: str
 

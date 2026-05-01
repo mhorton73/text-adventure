@@ -14,24 +14,24 @@
 # add: item:b
 # remove: flag:c
 # remove: item:d
-# gold: n OR -n
-# stat: stat_name:n OR -n
+# numchange: gold:10
+# numchange: hp:-6
+# numchange: strength:2
 # 
 # ## Choices
 #
 # list of choices (explained in choice_parser.py)
 
-from parser.primitives import parse_item_key_pair, parse_stat_change
+from parser.primitives import parse_item_key_pair, parse_numeric_pair
 from parser.choice_parser import parse_choices
 
 def parse_effects(lines: list[str]) -> dict:
     add = []
     remove = []
-    gold_change = 0
-    stat_change = []
+    numeric_changes = []
 
     for line in lines:
-        line = line.lstrip("- ").strip()
+        line = line.removeprefix("- ").strip()
 
         # add_flag / add_item
         if line.startswith("add:"):
@@ -43,20 +43,16 @@ def parse_effects(lines: list[str]) -> dict:
             pair = line.removeprefix("remove:").strip()
             remove.append(parse_item_key_pair(pair))
 
-        # gold
-        elif line.startswith("gold:"):
-            gold_change = int(line.split(":")[1].strip())
+        # numchange
+        elif line.startswith("numchange:"):
+            pair = line.removeprefix("numchange:").strip()
+            numeric_changes.append(parse_numeric_pair(pair))
 
-        # stat
-        elif line.startswith("stat:"):
-            pair = line.removeprefix("stat:").strip()
-            stat_change.append(parse_stat_change(pair))
 
     return {
         "add": add,
         "remove": remove,
-        "gold_change": gold_change,
-        "stat_change": stat_change
+        "numeric_changes": numeric_changes
     }
 
 
@@ -96,10 +92,12 @@ def parse_markdown_node(content: str) -> dict:
             continue
 
         # some basic validation
-        if mode == "effects" and not stripped.startswith(("add:", "remove:", "gold:", "stat:")):
+        if mode == "effects" and not stripped.startswith((
+            "add:", "remove:", "numchange:"
+        )):
             raise ValueError(f"Invalid effects line: {line}")
         if mode == "choices" and not stripped.startswith(
-            ("- ", "requires:", "excludes:", "skill:", "->", "requires gold:")
+            ("- ", "requires:", "excludes:", "numcon:", "skill:", "->")
         ):
             raise ValueError(f"Invalid choices line: {line}")
 

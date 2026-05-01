@@ -8,7 +8,7 @@
 #
 # - A choice with conditions
 # requires: flag:a, item:b, item:c...
-# requires gold: 17
+# numcon: gold >= 17, faith < 2, hp == 10, ..
 # excludes: flag:d, item:e, flag:f...
 # -> another_node_id
 #
@@ -57,6 +57,22 @@ def parse_items(raw: str):
 
     return items
 
+def parse_numerical_conditions(raw: str):
+    items = []
+
+    for trio in raw.split(","):
+        if not trio:
+            continue
+        key, op, value = trio.split()
+        numerical_condition = {
+            "key": key.strip(),
+            "op": op.strip(),
+            "value": int(value.strip())
+        }
+        items.append(numerical_condition)
+
+    return items
+
 def parse_next_node_id(choice: dict, line: str):
     line = line.strip().removeprefix("-> ")
 
@@ -86,8 +102,8 @@ def parse_choice_block(block: list[str]) -> dict:
         "text": None,
         "condition": {
             "required": [],
-            "required_gold": 0,
             "excluded": [],
+            "numeric": []
         },
         "skill_check": None,
         "next_node": None,
@@ -108,15 +124,14 @@ def parse_choice_block(block: list[str]) -> dict:
         if line.startswith("requires:"):
             raw = line.removeprefix("requires:").strip()
             choice["condition"]["required"] = parse_items(raw)
-            
-        elif line.startswith("requires gold:"):
-            choice["condition"]["required_gold"] = int(
-                line.removeprefix("requires gold:").strip()
-            )
 
         elif line.startswith("excludes:"):
             raw = line.removeprefix("excludes:").strip()
             choice["condition"]["excluded"] = parse_items(raw)
+            
+        elif line.startswith("numcon:"):
+            raw = line.removeprefix("numcon:").strip()
+            choice["condition"]["numeric"] = parse_numerical_conditions(raw)
 
         elif line.startswith("skill:"):
             raw = line.removeprefix("skill:").strip()

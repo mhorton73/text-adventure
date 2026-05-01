@@ -1,6 +1,6 @@
 
 from pydantic import BaseModel, Field
-from typing import List, Literal
+from typing import Literal
 from enum import Enum
 
 class Stat(str, Enum):
@@ -8,6 +8,13 @@ class Stat(str, Enum):
     dexterity = "dexterity"
     intelligence = "intelligence"
     faith = "faith"
+
+class ComparisonOp(str, Enum):
+    lt = "<"
+    lte = "<="
+    eq = "=="
+    gte = ">="
+    gt = ">"
 
 class StoryItem(BaseModel):
     key: str
@@ -17,18 +24,26 @@ class StatChange(BaseModel):
     stat: Stat
     delta: int
 
+class NumericChange(BaseModel):
+    key: str
+    delta: int
+
+class NumericCondition(BaseModel):
+    key: str
+    op: ComparisonOp
+    value: int
+
 # Write only
 class Effect(BaseModel):
-    add: List[StoryItem] = Field(default_factory=list)
-    remove: List[StoryItem] = Field(default_factory=list)
-    gold_change: int = 0 
-    stat_change: List[StatChange] = Field(default_factory=list)
+    add: list[StoryItem] = Field(default_factory=list)
+    remove: list[StoryItem] = Field(default_factory=list)
+    numeric_changes: list[NumericChange] = Field(default_factory=list)
 
 # Read only
 class Condition(BaseModel):
-    required: List[StoryItem] = Field(default_factory=list)
-    required_gold: int = 0
-    excluded: List[StoryItem] = Field(default_factory=list)
+    required: list[StoryItem] = Field(default_factory=list)
+    excluded: list[StoryItem] = Field(default_factory=list)
+    numeric: list[NumericCondition] = Field(default_factory=list)
 
 class SkillCheck(BaseModel):
     stat: Stat
@@ -47,4 +62,4 @@ class Node(BaseModel):
     id: str
     text: str
     effects: Effect = Field(default_factory=Effect)
-    choices: List[Choice]
+    choices: list[Choice]
